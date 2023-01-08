@@ -98,6 +98,8 @@ services:
         echo "Installing Connector"
         confluent-hub install --no-prompt debezium/debezium-connector-mysql:1.2.2
         confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:10.0.1
+        confluent-hub install --no-prompt jcustenborder/kafka-connect-twitter:0.3.34
+        confluent-hub install --no-prompt mongodb/kafka-connect-mongodb:1.5.0
         #
         echo "Launching Kafka Connect worker"
         /etc/confluent/docker/run &
@@ -115,6 +117,7 @@ services:
       - cluster.initial_master_nodes=es01
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - node.store.allow_mmap=false
     ulimits:
       memlock:
         soft: -1
@@ -126,7 +129,7 @@ services:
     extra_hosts:
       - "host.docker.internal:172.17.0.1"
 
-  kib01:
+  kibana:
     image: docker.elastic.co/kibana/kibana:7.11.2
     container_name: kib01
     ports:
@@ -136,3 +139,27 @@ services:
       ELASTICSEARCH_HOSTS: '["http://es01:9200"]'
     extra_hosts:
       - "host.docker.internal:172.17.0.1"
+
+  mongodb:
+    image: mongo
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+      - MONGO_INITDB_DATABASE=mongodatabase
+    extra_hosts:
+      - "host.docker.internal:172.17.0.1"
+
+  mongo-express:
+    image: mongo-express
+    restart: unless-stopped
+    ports:
+      - 8085:8081
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_AUTH_USERNAME=root
+      - ME_CONFIG_MONGODB_AUTH_PASSWORD=root
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=root
+    depends_on:
+      - mongodb
